@@ -387,8 +387,8 @@ def read_truefalse(sheet, rowstart, colstart, rowstop, colstop, colapart=1):
     """
     out = []
     for i in range(rowstart, rowstop+1):
-        if sheet.cell_value(i, colstart + colapart) == 1:
-            out.append(sheet.cell_value(i, colstart))
+        if sheet.cell(i, colstart + colapart).internal_value == 1:
+            out.append(sheet.cell(i, colstart).internal_value)
     return out
 
 def load_config_excel(ConfigFile,AbsPath=True):
@@ -399,17 +399,18 @@ def load_config_excel(ConfigFile,AbsPath=True):
     :param ConfigFile: String with (relative) path to the DispaSET excel configuration file
     :param AbsPath:    If true, relative paths are automatically changed into absolute paths (recommended)
     """
-    import xlrd
-    wb = xlrd.open_workbook(filename=ConfigFile)  # Option for csv to be added later
-    sheet = wb.sheet_by_name('main')
+    from openpyxl import load_workbook
+    
+    wb = load_workbook(ConfigFile)  # Option for csv to be added later
+    sheet = wb['main']
     config = {}
     
-    if sheet.cell_value(0,0) == 'Dispa-SET Configuration File (v20.01)':
-        config['Description'] = sheet.cell_value(5, 1)
-        config['StartDate'] = xlrd.xldate_as_tuple(sheet.cell_value(56, 2), wb.datemode)
-        config['StopDate'] = xlrd.xldate_as_tuple(sheet.cell_value(57, 2), wb.datemode)
-        config['HorizonLength'] = int(sheet.cell_value(58, 2))
-        config['LookAhead'] = int(sheet.cell_value(59, 2))
+    if sheet.cell(1,1).internal_value == 'Dispa-SET Configuration File (v20.01)':
+        config['Description'] = sheet.cell(6,2).internal_value
+        config['StartDate'] = sheet.cell(57,3).internal_value.timetuple()[0:6]
+        config['StopDate'] = sheet.cell(58,3).internal_value.timetuple()[0:6]
+        config['HorizonLength'] = int(sheet.cell(59,3).internal_value)
+        config['LookAhead'] = int(sheet.cell(60,3).internal_value)
         
         # Defning the input locations in the config file:
         StdParameters={'SimulationDirectory':33,'WriteGDX':34,'WritePickle':35,'GAMS_folder':36,
@@ -430,22 +431,22 @@ def load_config_excel(ConfigFile,AbsPath=True):
                     'PriceOfSpillage':205,'WaterValue':206,'ShareOfQuickStartUnits':163,'ShareOfFlexibleDemand':125,
                     'DemandFlexibility':162,'PriceTransmission':169}
         for p in StdParameters:
-            config[p] = sheet.cell_value(StdParameters[p], 2)
+            config[p] = sheet.cell(StdParameters[p] + 1, 3).internal_value
         for p in PathParameters:
-            config[p] = sheet.cell_value(PathParameters[p], 2)
+            config[p] = sheet.cell(PathParameters[p] + 1, 3).internal_value
         config['modifiers'] = {}
         for p in modifiers:
-            config['modifiers'][p] = sheet.cell_value(modifiers[p], 2)
+            config['modifiers'][p] = sheet.cell(modifiers[p] + 1, 3).internal_value
         config['default'] = {}
         for p in default:
-            config['default'][p] = sheet.cell_value(default[p], 5)
+            config['default'][p] = sheet.cell(default[p] + 1, 6).internal_value
             
         #True/Falst values:
-        config['zones'] = read_truefalse(sheet, 225, 1, 247, 3)
-        config['zones'] = config['zones'] + read_truefalse(sheet, 225, 4, 247, 6)
-        config['mts_zones'] = read_truefalse(sheet, 225, 1, 247, 3, 2)
-        config['mts_zones'] = config['mts_zones'] + read_truefalse(sheet, 225, 4, 247, 6, 2)
-        config['ReserveParticipation'] = read_truefalse(sheet, 305, 1, 319, 3)
+        config['zones'] = read_truefalse(sheet, 226, 2, 247, 4)
+        config['zones'] = config['zones'] + read_truefalse(sheet, 226, 5, 247, 7)
+        config['mts_zones'] = read_truefalse(sheet, 226, 2, 247, 4, 2)
+        config['mts_zones'] = config['mts_zones'] + read_truefalse(sheet, 226, 5, 247, 7, 2)
+        config['ReserveParticipation'] = read_truefalse(sheet, 306, 2, 319, 4)
 
         # Set default values (for backward compatibility):
         for param in DEFAULTS:
@@ -462,7 +463,7 @@ def load_config_excel(ConfigFile,AbsPath=True):
             if not os.path.isabs(config['SimulationDirectory']):
                 config['SimulationDirectory'] = os.path.join(basefolder,config['SimulationDirectory'])
             for param in PathParameters:
-                if config[param] == '' or config[param].isspace():
+                if config[param] == '' or config[param] is None or str(config[param]).isspace():
                     config[param] = ''
                 elif not os.path.isabs(config[param]):
                     config[param] = os.path.join(basefolder,config[param])
@@ -474,29 +475,29 @@ def load_config_excel(ConfigFile,AbsPath=True):
         return config        
         
 
-    elif sheet.cell_value(0,0) == 'Dispa-SET Configuration File':
-        config['Description'] = sheet.cell_value(5, 1)
-        config['SimulationDirectory'] = sheet.cell_value(17, 2)
-        config['WriteExcel'] = sheet.cell_value(18, 2)
-        config['WriteGDX'] = sheet.cell_value(19, 2)
-        config['WritePickle'] = sheet.cell_value(20, 2)
-        config['GAMS_folder'] = sheet.cell_value(21, 2)
-        config['cplex_path'] = sheet.cell_value(22, 2)
+    elif sheet.cell(1,1).internal_value == 'Dispa-SET Configuration File':
+        config['Description'] = sheet.cell(6, 2).internal_value
+        config['SimulationDirectory'] = sheet.cell(18, 3).internal_value
+        config['WriteExcel'] = sheet.cell(19, 3).internal_value
+        config['WriteGDX'] = sheet.cell(20, 3).internal_value
+        config['WritePickle'] = sheet.cell(21, 3).internal_value
+        config['GAMS_folder'] = sheet.cell(22, 3).internal_value
+        config['cplex_path'] = sheet.cell(23, 3).internal_value
     
-        config['StartDate'] = xlrd.xldate_as_tuple(sheet.cell_value(30, 2), wb.datemode)
-        config['StopDate'] = xlrd.xldate_as_tuple(sheet.cell_value(31, 2), wb.datemode)
-        config['HorizonLength'] = int(sheet.cell_value(32, 2))
-        config['LookAhead'] = int(sheet.cell_value(33, 2))
-        config['DataTimeStep'] = sheet.cell_value(34, 2)
-        config['SimulationTimeStep'] = sheet.cell_value(35, 2)
+        config['StartDate'] = sheet.cell(31, 3).internal_value.timetuple()[0:6]
+        config['StopDate'] = sheet.cell(32, 3).internal_value.timetuple()[0:6]
+        config['HorizonLength'] = int(sheet.cell(33, 3).internal_value)
+        config['LookAhead'] = int(sheet.cell(34, 3).internal_value)
+        config['DataTimeStep'] = sheet.cell(35, 3).internal_value
+        config['SimulationTimeStep'] = sheet.cell(36, 3).internal_value
     
-        config['SimulationType'] = sheet.cell_value(46, 2)
-        config['ReserveCalculation'] = sheet.cell_value(47, 2)
-        config['AllowCurtailment'] = sheet.cell_value(48, 2)
+        config['SimulationType'] = sheet.cell(47, 3).internal_value
+        config['ReserveCalculation'] = sheet.cell(48, 3).internal_value
+        config['AllowCurtailment'] = sheet.cell(49, 3).internal_value
     
-        config['HydroScheduling'] = sheet.cell_value(53, 2)
-        config['HydroSchedulingHorizon'] = sheet.cell_value(54, 2)
-        config['InitialFinalReservoirLevel'] = sheet.cell_value(55, 2)
+        config['HydroScheduling'] = sheet.cell(54, 3).internal_value
+        config['HydroSchedulingHorizon'] = sheet.cell(55, 3).internal_value
+        config['InitialFinalReservoirLevel'] = sheet.cell(56, 3).internal_value
     
         # Set default values (for backward compatibility):
         NonEmptyarameters = {'DataTimeStep':1,'SimulationTimeStep':1,'HydroScheduling':'Off','HydroSchedulingHorizon':'Annual','InitialFinalReservoirLevel':True}
@@ -510,13 +511,13 @@ def load_config_excel(ConfigFile,AbsPath=True):
           'PriceOfBiomass', 'PriceOfCO2', 'ReservoirLevels', 'PriceOfLignite', 'PriceOfPeat','HeatDemand',
           'CostHeatSlack','CostLoadShedding','ShareOfFlexibleDemand']
         for i, param in enumerate(PARAMS):
-            config[param] = sheet.cell_value(61 + i, 2)
+            config[param] = sheet.cell(62 + i, 3).internal_value
     
         # List of new parameters for which an external file path must be specified:
         params2 = ['Temperatures','PriceTransmission','Reserve2D','Reserve2U']
-        if sheet.nrows>150:                 # for backward compatibility (old excel sheets had less than 150 rows)
+        if sheet.max_row>150:                 # for backward compatibility (old excel sheets had less than 150 rows)
             for i, param in enumerate(params2):
-                config[param] = sheet.cell_value(156 + i, 2)
+                config[param] = sheet.cell(157 + i, 3).internal_value
         else:
             for param in params2:
                 config[param] = ''
@@ -529,28 +530,28 @@ def load_config_excel(ConfigFile,AbsPath=True):
             if not os.path.isabs(config['SimulationDirectory']):
                 config['SimulationDirectory'] = os.path.join(basefolder,config['SimulationDirectory'])
             for param in PARAMS+params2:
-                if config[param] == '' or config[param].isspace():
+                if config[param] == '' or config[param] is None or str(config[param]).isspace():
                     config[param] = ''
                 elif not os.path.isabs(config[param]):
                     config[param] = os.path.join(basefolder,config[param])
     
         config['default'] = {}
-        config['default']['ReservoirLevelInitial'] = sheet.cell_value(56, 5)
-        config['default']['ReservoirLevelFinal'] = sheet.cell_value(57, 5)
-        config['default']['PriceOfNuclear'] = sheet.cell_value(69, 5)
-        config['default']['PriceOfBlackCoal'] = sheet.cell_value(70, 5)
-        config['default']['PriceOfGas'] = sheet.cell_value(71, 5)
-        config['default']['PriceOfFuelOil'] = sheet.cell_value(72, 5)
-        config['default']['PriceOfBiomass'] = sheet.cell_value(73, 5)
-        config['default']['PriceOfCO2'] = sheet.cell_value(74, 5)
-        config['default']['PriceOfLignite'] = sheet.cell_value(76, 5)
-        config['default']['PriceOfPeat'] = sheet.cell_value(77, 5)
-        config['default']['LoadShedding'] = sheet.cell_value(65, 5)
-        config['default']['CostHeatSlack'] = sheet.cell_value(79, 5)
-        config['default']['CostLoadShedding'] = sheet.cell_value(80, 5)
-        config['default']['ValueOfLostLoad'] = sheet.cell_value(81, 5)
-        config['default']['PriceOfSpillage'] = sheet.cell_value(82, 5)
-        config['default']['WaterValue'] = sheet.cell_value(83, 5)
+        config['default']['ReservoirLevelInitial'] = sheet.cell(57, 6).internal_value
+        config['default']['ReservoirLevelFinal'] = sheet.cell(58, 6).internal_value
+        config['default']['PriceOfNuclear'] = sheet.cell(70, 6).internal_value
+        config['default']['PriceOfBlackCoal'] = sheet.cell(71, 6).internal_value
+        config['default']['PriceOfGas'] = sheet.cell(72, 6).internal_value
+        config['default']['PriceOfFuelOil'] = sheet.cell(73, 6).internal_value
+        config['default']['PriceOfBiomass'] = sheet.cell(74, 6).internal_value
+        config['default']['PriceOfCO2'] = sheet.cell(75, 6).internal_value
+        config['default']['PriceOfLignite'] = sheet.cell(77, 6).internal_value
+        config['default']['PriceOfPeat'] = sheet.cell(78, 6).internal_value
+        config['default']['LoadShedding'] = sheet.cell(66, 6).internal_value
+        config['default']['CostHeatSlack'] = sheet.cell(80, 6).internal_value
+        config['default']['CostLoadShedding'] = sheet.cell(81, 6).internal_value
+        config['default']['ValueOfLostLoad'] = sheet.cell(82, 6).internal_value
+        config['default']['PriceOfSpillage'] = sheet.cell(83, 6).internal_value
+        config['default']['WaterValue'] = sheet.cell(84, 6).internal_value
         config['default']['ShareOfQuickStartUnits'] = 0.5          # to be added to xlsx file
         
         # Set default values (for backward compatibility):
@@ -558,20 +559,20 @@ def load_config_excel(ConfigFile,AbsPath=True):
             if config['default'].get(param,'')=='':
                 config['default'][param]=DEFAULTS[param]
     
-        config['zones'] = read_truefalse(sheet, 86, 1, 109, 3)
-        config['zones'] = config['zones'] + read_truefalse(sheet, 86, 4, 109, 6)
+        config['zones'] = read_truefalse(sheet, 87, 2, 110, 4)
+        config['zones'] = config['zones'] + read_truefalse(sheet, 87, 5, 110, 7)
     
-        config['mts_zones'] = read_truefalse(sheet, 86, 1, 109, 3, 2)
-        config['mts_zones'] = config['mts_zones'] + read_truefalse(sheet, 86, 4, 109, 6, 2)
+        config['mts_zones'] = read_truefalse(sheet, 87, 2, 110, 4, 2)
+        config['mts_zones'] = config['mts_zones'] + read_truefalse(sheet, 87, 5, 110, 7, 2)
     
         config['modifiers'] = {}
-        config['modifiers']['Demand'] = sheet.cell_value(111, 2)
-        config['modifiers']['Wind'] = sheet.cell_value(112, 2)
-        config['modifiers']['Solar'] = sheet.cell_value(113, 2)
-        config['modifiers']['Storage'] = sheet.cell_value(114, 2)
+        config['modifiers']['Demand'] = sheet.cell(112, 3).internal_value
+        config['modifiers']['Wind'] = sheet.cell(113, 3).internal_value
+        config['modifiers']['Solar'] = sheet.cell(114, 3).internal_value
+        config['modifiers']['Storage'] = sheet.cell(115, 3).internal_value
     
         # Read the technologies participating to reserve markets:
-        config['ReserveParticipation'] = read_truefalse(sheet, 131, 1, 145, 3)
+        config['ReserveParticipation'] = read_truefalse(sheet, 132, 2, 146, 4)
     
         logging.info("Using config file " + ConfigFile + " to build the simulation environment")
         logging.info("Using " + config['SimulationDirectory'] + " as simulation folder")
@@ -648,3 +649,5 @@ def export_yaml_config(ExcelFile, YAMLFile):
     with open(YAMLFile, 'w') as outfile:
         yaml.dump(config, outfile, default_flow_style=False)
     return True
+
+
